@@ -37,6 +37,7 @@ final class RegisterTradeExecutionHandler
 
         $record = TradeRecord::create(
             $recordId,
+            $trade->userId(),
             $command->tradeId,
             $trade->asset()->symbol(),
             new Money($command->entryPrice, $command->currency),

@@ -31,6 +31,7 @@ final class TradeRecord extends AggregateRoot
 
     public static function create(
         string $id,
+        string $userId,
         string $tradeId,
         string $assetSymbol,
         Money $entryPrice,
@@ -39,6 +40,7 @@ final class TradeRecord extends AggregateRoot
     ): self {
         $journal = new TradeJournal(
             $id,
+            $userId,
             $tradeId,
             $assetSymbol,
             $entryPrice,
@@ -52,6 +54,16 @@ final class TradeRecord extends AggregateRoot
         $record->recordEvent(new TradeRecordCreated($id, $tradeId, $assetSymbol));
 
         return $record;
+    }
+
+    public static function reconstitute(TradeJournal $journal): self
+    {
+        return new self($journal->id(), $journal);
+    }
+
+    public function userId(): string
+    {
+        return $this->journal->userId();
     }
 
     public function review(

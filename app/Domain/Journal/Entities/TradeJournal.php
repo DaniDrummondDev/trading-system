@@ -27,6 +27,7 @@ final class TradeJournal extends Entity
 
     public function __construct(
         string $id,
+        private readonly string $userId,
         private readonly string $tradeId,
         private readonly string $assetSymbol,
         private readonly Money $entryPrice,
@@ -35,6 +36,39 @@ final class TradeJournal extends Entity
         private readonly \DateTimeImmutable $createdAt,
     ) {
         parent::__construct($id);
+    }
+
+    public static function reconstitute(
+        string $id,
+        string $userId,
+        string $tradeId,
+        string $assetSymbol,
+        Money $entryPrice,
+        Quantity $quantity,
+        DateRange $tradePeriod,
+        \DateTimeImmutable $createdAt,
+        ?TradeOutcome $outcome = null,
+        ?TradeRationale $rationale = null,
+        ?EmotionalState $emotionalState = null,
+        ?TradeLesson $lesson = null,
+        bool $reviewed = false,
+    ): self {
+        $journal = new self($id, $userId, $tradeId, $assetSymbol, $entryPrice, $quantity, $tradePeriod, $createdAt);
+
+        if ($reviewed && $outcome !== null) {
+            $journal->outcome = $outcome;
+            $journal->rationale = $rationale;
+            $journal->emotionalState = $emotionalState;
+            $journal->lesson = $lesson;
+            $journal->reviewed = true;
+        }
+
+        return $journal;
+    }
+
+    public function userId(): string
+    {
+        return $this->userId;
     }
 
     public function tradeId(): string

@@ -20,7 +20,7 @@ final class GetOpenTradesHandler
      */
     public function handle(GetOpenTradesQuery $query): array
     {
-        $trades = $this->tradeRepository->getOpenTrades();
+        $trades = $this->tradeRepository->getOpenTrades($query->userId);
 
         return array_map(fn (TradeAggregate $trade) => $this->toDTO($trade), $trades);
     }

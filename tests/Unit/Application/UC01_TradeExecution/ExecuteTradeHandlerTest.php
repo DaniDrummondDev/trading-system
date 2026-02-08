@@ -18,7 +18,7 @@ use App\Domain\Trade\ValueObjects\TradeState;
 
 function createApprovedTrade(string $id = 'trade-001'): TradeAggregate
 {
-    $trade = TradeAggregate::create($id, new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
+    $trade = TradeAggregate::create($id, 'user-001', new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
     $trade->analyze(
         new PriceLevel(new Price('25.50'), PriceLevelType::ENTRY),
         new PriceLevel(new Price('24.00'), PriceLevelType::STOP),
@@ -79,7 +79,7 @@ it('publica evento TradeExecuted com dados corretos', function () {
 });
 
 it('falha ao executar trade não aprovado', function () {
-    $trade = TradeAggregate::create('trade-002', new Asset('VALE3', 'B3'), TradeDirection::LONG, Timeframe::D1);
+    $trade = TradeAggregate::create('trade-002', 'user-001', new Asset('VALE3', 'B3'), TradeDirection::LONG, Timeframe::D1);
     $trade->releaseEvents();
 
     $repository = Mockery::mock(TradeRepository::class);

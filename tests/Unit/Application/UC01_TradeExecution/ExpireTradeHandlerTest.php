@@ -18,7 +18,7 @@ use App\Domain\Trade\ValueObjects\TradeState;
 
 function createApprovedTradeForExpire(string $id = 'trade-001'): TradeAggregate
 {
-    $trade = TradeAggregate::create($id, new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
+    $trade = TradeAggregate::create($id, 'user-001', new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
     $trade->analyze(
         new PriceLevel(new Price('25.50'), PriceLevelType::ENTRY),
         new PriceLevel(new Price('24.00'), PriceLevelType::STOP),

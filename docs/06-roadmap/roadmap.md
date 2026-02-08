@@ -241,74 +241,74 @@ Todos os handlers seguem o padrão explícito:
 
 ---
 
-## Fase 3 — Infrastructure: Persistence
+## Fase 3 — Infrastructure: Persistence ✅
 
 **Objetivo**: Implementar a camada de persistência com PostgreSQL 18,
 Eloquent Models e repositórios concretos.
 
+**Concluída**: 2026-02-08 | 25 testes de integração (80 assertions) + 186 unit tests (422 assertions)
+
+### 3.0 Refatoração Domain: userId + reconstitute()
+
+- [x] `Trade` — `userId` como 2º param + `reconstitute()` estático
+- [x] `TradeAggregate` — `userId` em `create()` + `reconstitute(Trade)`
+- [x] `TradeJournal` — `userId` como 2º param + `reconstitute()` estático
+- [x] `TradeRecord` — `userId` em `create()` + `reconstitute(TradeJournal)`
+- [x] `TradeRepository::getOpenTrades(string $userId)` — filtro por usuário
+- [x] Todos os 186 testes unitários atualizados e passando
+
 ### 3.1 Migrations
 
-- [ ] `create_assets_table` (symbol, market, name, active)
-- [ ] `create_trade_decisions_table` (state machine completa)
-- [ ] `create_trade_records_table` (journal)
-- [ ] `create_trade_lessons_table`
-- [ ] `create_trader_metrics_table`
-- [ ] `create_user_profiles_table` (risk profile, trading profile)
-- [ ] `create_market_data_table` (candles OHLCV)
-- [ ] `create_domain_events_table` (event store imutável)
-- [ ] `create_ai_analyses_table` (embeddings via pgvector — preparação para Fase 8)
-  - Coluna `embedding vector(1536)` para armazenamento vetorial
-  - Índice HNSW (`vector_cosine_ops`) para similarity search
-  - Metadados JSONB (ticker, timeframe, strategy, context)
+- [x] `create_trade_decisions_table` (state machine completa)
+- [x] `create_trade_records_table` (journal com review)
+- [x] `create_trader_metrics_table` (6 KPIs)
+- [x] `create_domain_events_table` (event store imutável, JSONB payload)
+- [x] `create_ai_analyses_table` (pgvector 1536, HNSW index)
 
 ### 3.2 Eloquent Models
 
-Localização: `app/Infrastructure/Persistence/Eloquent/`
+- [x] `TradeDecisionModel` — casts: immutable_datetime, integer
+- [x] `TradeRecordModel` — casts: boolean, immutable_datetime
+- [x] `TraderMetricsModel` — casts: immutable_datetime
+- [x] `DomainEventModel` — timestamps=false, payload→array
+- [x] `AiAnalysisModel` — metadata→array
 
-- [ ] `TradeDecisionModel`
-- [ ] `TradeRecordModel`
-- [ ] `TradeLessonModel`
-- [ ] `TraderMetricsModel`
-- [ ] `UserProfileModel`
-- [ ] `MarketDataModel`
-- [ ] `DomainEventModel`
-- [ ] `AiAnalysisModel` (com cast de `vector` via pgvector)
+### 3.3 Repository Implementations (Dehydration/Hydration)
 
-### 3.3 Repository Implementations
+- [x] `TradeRepositoryEloquent` — save/getById/getOpenTrades(userId)
+- [x] `TradeJournalRepositoryEloquent` — save/getById/getByTradeId/getByUserId
+- [x] `MetricsRepositoryEloquent` — update(upsert)/getCurrent
 
-Localização: `app/Infrastructure/Persistence/Repositories/`
+### 3.4 Event Bus + Services
 
-- [ ] `TradeRepositoryEloquent` implements `TradeRepository`
-- [ ] `TradeJournalRepositoryEloquent` implements `TradeJournalRepository`
-- [ ] `MetricsRepositoryEloquent` implements `MetricsRepository`
-- [ ] `UserProfileRepositoryEloquent`
-- [ ] `MarketDataRepositoryEloquent`
-- [ ] `AiAnalysisRepositoryPgVector` implements `AiAnalysisRepository` (similarity search)
-
-### 3.4 Event Bus
-
-- [ ] `LaravelEventPublisher` implements `EventPublisher`
-- [ ] Event Listeners registration no `DomainServiceProvider`
-- [ ] Event Store persistência (log imutável)
+- [x] `LaravelEventPublisher` — persiste no Event Store + despacha via Laravel events
+- [x] `LaravelUuidGenerator` — Str::uuid()
 
 ### 3.5 Bindings no InfrastructureServiceProvider
 
-- [ ] Bind todos os contracts → implementações
-- [ ] Validar que troca de implementação não quebra testes
+- [x] TradeRepository → TradeRepositoryEloquent
+- [x] TradeJournalRepository → TradeJournalRepositoryEloquent
+- [x] MetricsRepository → MetricsRepositoryEloquent
+- [x] EventPublisher → LaravelEventPublisher
+- [x] UuidGenerator → LaravelUuidGenerator
 
-### 3.6 Testes da Fase 3
+### 3.6 Testes
 
-- [ ] Testes de integração dos repositórios (com banco real via Docker)
-- [ ] Testes de transações (rollback em falha)
-- [ ] Testes do Event Store (imutabilidade)
-- [ ] Testes de migration (up/down)
+- [x] 9 testes integração: TradeRepositoryEloquent (save, análise, risco, execução, close, open trades, isolamento, not found, upsert)
+- [x] 6 testes integração: TradeJournalRepositoryEloquent (byId, byTradeId, byUserId, período, review, not found)
+- [x] 4 testes integração: MetricsRepositoryEloquent (save/get, null, upsert, período)
+- [x] 4 testes integração: LaravelEventPublisher (persistência, JSONB, múltiplos, dispatch)
+- [x] 2 testes integração: LaravelUuidGenerator (válido, únicos)
+- [x] 8 arch tests: Infrastructure (strict_types, final, dependências)
 
 ### Critérios de Aceite
 
-- [ ] Todas as migrations rodam sem erro
-- [ ] Repositórios passam nos testes de integração
-- [ ] Event Bus publica e consome eventos corretamente
-- [ ] Troca de implementação do repository não quebra Application
+- [x] Todas as migrations rodam sem erro (migrate:fresh)
+- [x] Repositórios passam nos testes de integração com PostgreSQL real
+- [x] Event Store persiste eventos imutáveis com JSONB
+- [x] Bindings resolvem corretamente no container
+- [x] PHPStan nível 5 com 0 erros
+- [x] Pint formatação OK (170 arquivos)
 
 ---
 

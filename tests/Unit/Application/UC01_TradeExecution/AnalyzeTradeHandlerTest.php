@@ -15,7 +15,7 @@ use App\Domain\Trade\ValueObjects\TradeState;
 
 function createTradeForAnalysis(string $id = 'trade-001'): TradeAggregate
 {
-    $trade = TradeAggregate::create($id, new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
+    $trade = TradeAggregate::create($id, 'user-001', new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
     $trade->releaseEvents();
 
     return $trade;

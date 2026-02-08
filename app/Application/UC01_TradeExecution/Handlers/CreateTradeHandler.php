@@ -28,6 +28,7 @@ final class CreateTradeHandler
 
         $trade = TradeAggregate::create(
             $tradeId,
+            $command->userId,
             new Asset($command->assetSymbol, $command->market),
             TradeDirection::from($command->direction),
             Timeframe::from($command->timeframe),

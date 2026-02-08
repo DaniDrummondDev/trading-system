@@ -36,11 +36,12 @@ final class TradeAggregate extends AggregateRoot
 
     public static function create(
         string $id,
+        string $userId,
         Asset $asset,
         TradeDirection $direction,
         Timeframe $timeframe,
     ): self {
-        $trade = new Trade($id, $asset, $direction, $timeframe, new \DateTimeImmutable);
+        $trade = new Trade($id, $userId, $asset, $direction, $timeframe, new \DateTimeImmutable);
         $aggregate = new self($id, $trade);
 
         $aggregate->recordEvent(new TradeCreated(
@@ -51,6 +52,11 @@ final class TradeAggregate extends AggregateRoot
         ));
 
         return $aggregate;
+    }
+
+    public static function reconstitute(Trade $trade): self
+    {
+        return new self($trade->id(), $trade);
     }
 
     public function analyze(PriceLevel $entry, PriceLevel $stop, PriceLevel $target): void
@@ -128,6 +134,11 @@ final class TradeAggregate extends AggregateRoot
     public function state(): TradeState
     {
         return $this->trade->state();
+    }
+
+    public function userId(): string
+    {
+        return $this->trade->userId();
     }
 
     public function asset(): Asset

@@ -14,6 +14,7 @@ use App\Domain\Journal\ValueObjects\Quantity;
 it('retorna lista de trade records do usuário', function () {
     $record = TradeRecord::create(
         'rec-001',
+        'user-001',
         'trade-001',
         'PETR4',
         new Money('25.40'),

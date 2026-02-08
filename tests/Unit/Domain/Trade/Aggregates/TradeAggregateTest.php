@@ -24,6 +24,7 @@ function createTradeAggregate(string $id = 'trade-001'): TradeAggregate
 {
     return TradeAggregate::create(
         $id,
+        'user-001',
         new Asset('PETR4', 'B3'),
         TradeDirection::LONG,
         Timeframe::D1,

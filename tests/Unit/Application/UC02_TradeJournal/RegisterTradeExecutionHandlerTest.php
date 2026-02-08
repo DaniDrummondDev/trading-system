@@ -21,7 +21,7 @@ use App\Domain\Trade\ValueObjects\TradeDirection;
 
 function createExecutedTradeForJournal(string $id = 'trade-001'): TradeAggregate
 {
-    $trade = TradeAggregate::create($id, new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
+    $trade = TradeAggregate::create($id, 'user-001', new Asset('PETR4', 'B3'), TradeDirection::LONG, Timeframe::D1);
     $trade->analyze(
         new PriceLevel(new Price('25.50'), PriceLevelType::ENTRY),
         new PriceLevel(new Price('24.00'), PriceLevelType::STOP),
@@ -94,7 +94,7 @@ it('publica evento TradeRecordCreated', function () {
 });
 
 it('rejeita registro quando trade não está em EXECUTED', function () {
-    $trade = TradeAggregate::create('trade-002', new Asset('VALE3', 'B3'), TradeDirection::LONG, Timeframe::D1);
+    $trade = TradeAggregate::create('trade-002', 'user-001', new Asset('VALE3', 'B3'), TradeDirection::LONG, Timeframe::D1);
     $trade->analyze(
         new PriceLevel(new Price('60.00'), PriceLevelType::ENTRY),
         new PriceLevel(new Price('58.00'), PriceLevelType::STOP),

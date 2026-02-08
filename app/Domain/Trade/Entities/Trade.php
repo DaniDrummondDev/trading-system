@@ -38,6 +38,7 @@ final class Trade extends Entity
 
     public function __construct(
         string $id,
+        private readonly string $userId,
         private readonly Asset $asset,
         private readonly TradeDirection $direction,
         private readonly Timeframe $timeframe,
@@ -45,6 +46,46 @@ final class Trade extends Entity
     ) {
         parent::__construct($id);
         $this->state = TradeState::CREATED;
+    }
+
+    public static function reconstitute(
+        string $id,
+        string $userId,
+        Asset $asset,
+        TradeDirection $direction,
+        Timeframe $timeframe,
+        TradeState $state,
+        \DateTimeImmutable $createdAt,
+        ?PriceLevel $entry = null,
+        ?PriceLevel $stop = null,
+        ?PriceLevel $target = null,
+        ?string $riskPercentage = null,
+        ?int $positionSize = null,
+        ?Price $executedPrice = null,
+        ?int $executedQuantity = null,
+        ?\DateTimeImmutable $executedAt = null,
+        ?string $result = null,
+        ?\DateTimeImmutable $closedAt = null,
+    ): self {
+        $trade = new self($id, $userId, $asset, $direction, $timeframe, $createdAt);
+        $trade->state = $state;
+        $trade->entry = $entry;
+        $trade->stop = $stop;
+        $trade->target = $target;
+        $trade->riskPercentage = $riskPercentage;
+        $trade->positionSize = $positionSize;
+        $trade->executedPrice = $executedPrice;
+        $trade->executedQuantity = $executedQuantity;
+        $trade->executedAt = $executedAt;
+        $trade->result = $result;
+        $trade->closedAt = $closedAt;
+
+        return $trade;
+    }
+
+    public function userId(): string
+    {
+        return $this->userId;
     }
 
     public function state(): TradeState

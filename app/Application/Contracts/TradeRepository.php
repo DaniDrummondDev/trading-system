@@ -12,5 +12,6 @@ interface TradeRepository
 
     public function getById(string $tradeId): TradeAggregate;
 
-    public function getOpenTrades(): array;
+    /** @return TradeAggregate[] */
+    public function getOpenTrades(string $userId): array;
 }

@@ -6,5 +6,7 @@ namespace App\Application\UC01_TradeExecution\Queries;
 
 final readonly class GetOpenTradesQuery
 {
-    public function __construct() {}
+    public function __construct(
+        public string $userId,
+    ) {}
 }

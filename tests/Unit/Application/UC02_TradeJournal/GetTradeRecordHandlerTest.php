@@ -17,6 +17,7 @@ function createTradeRecordForQuery(string $id = 'rec-001', string $tradeId = 'tr
 {
     $record = TradeRecord::create(
         $id,
+        'user-001',
         $tradeId,
         'PETR4',
         new Money('25.40'),

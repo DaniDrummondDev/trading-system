@@ -19,6 +19,7 @@ function createTradeRecord(string $id = 'rec-001'): TradeRecord
 {
     return TradeRecord::create(
         $id,
+        'user-001',
         'trade-001',
         'PETR4',
         new Money('25.50'),
