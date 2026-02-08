@@ -23,6 +23,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /.phpstan.cache
-phpstan-baseline.neon
 coverage*.xml
 /coverage

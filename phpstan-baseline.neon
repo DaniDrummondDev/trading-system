@@ -1,0 +1,37 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method App\\Application\\Contracts\\MetricsRepository\:\:getCurrent\(\) has invalid return type App\\Domain\\Metrics\\Entities\\TraderMetrics\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Application/Contracts/MetricsRepository.php
+
+		-
+			message: '#^Parameter \$metrics of method App\\Application\\Contracts\\MetricsRepository\:\:update\(\) has invalid type App\\Domain\\Metrics\\Entities\\TraderMetrics\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Application/Contracts/MetricsRepository.php
+
+		-
+			message: '#^Method App\\Application\\Contracts\\TradeJournalRepository\:\:getByTradeId\(\) has invalid return type App\\Domain\\Journal\\Entities\\TradeJournal\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Application/Contracts/TradeJournalRepository.php
+
+		-
+			message: '#^Parameter \$journal of method App\\Application\\Contracts\\TradeJournalRepository\:\:save\(\) has invalid type App\\Domain\\Journal\\Entities\\TradeJournal\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Application/Contracts/TradeJournalRepository.php
+
+		-
+			message: '#^Method App\\Application\\Contracts\\TradeRepository\:\:getById\(\) has invalid return type App\\Domain\\Trade\\Aggregates\\TradeAggregate\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Application/Contracts/TradeRepository.php
+
+		-
+			message: '#^Parameter \$trade of method App\\Application\\Contracts\\TradeRepository\:\:save\(\) has invalid type App\\Domain\\Trade\\Aggregates\\TradeAggregate\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Application/Contracts/TradeRepository.php
