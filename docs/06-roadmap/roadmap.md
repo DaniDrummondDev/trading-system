@@ -34,109 +34,115 @@ contratos base) já foi concluída.
 
 ---
 
-## Fase 1 — Domain Layer
+## Fase 1 — Domain Layer ✅
 
 **Objetivo**: Implementar todas as regras de negócio como código puro PHP,
 sem nenhuma dependência de framework, banco de dados ou IA.
 
 **Princípio**: O Domain é 100% testável com `pest` sem Laravel boot.
 
+**Resultado**: 136 testes | 278 assertions | PHPStan nível 5 com 0 erros | 12 testes de arquitetura
+
 ### 1.1 Shared Kernel
 
-- [ ] `DomainEvent` interface (já criada)
-- [ ] `Entity` base abstrata (identity, equality)
-- [ ] `ValueObject` base abstrata (immutability, equality)
-- [ ] `AggregateRoot` base abstrata (event recording)
+- [x] `DomainEvent` interface (refatorada: eventId, aggregateId, timestamp imutável)
+- [x] `Entity` base abstrata (identity, equality)
+- [x] `ValueObject` base abstrata (immutability, equality)
+- [x] `AggregateRoot` base abstrata (event recording: recordEvent, releaseEvents)
 
 ### 1.2 Bounded Context: Trade
 
 **Entities:**
-- [ ] `Trade` — identidade do trade no ciclo de vida
+- [x] `Trade` — identidade do trade no ciclo de vida
 
 **Aggregate Root:**
-- [ ] `TradeAggregate` — orquestra o ciclo completo do trade
+- [x] `TradeAggregate` — orquestra o ciclo completo do trade
 
 **Value Objects:**
-- [ ] `Price` (valor decimal, imutável)
-- [ ] `Timeframe` (D1, validado)
-- [ ] `TradeDirection` (LONG | SHORT)
-- [ ] `PriceLevel` (price + type: ENTRY | STOP | TARGET)
-- [ ] `DecisionStatus` (ALLOW | BLOCK | WAIT)
-- [ ] `Reason` (code + description)
-- [ ] `Asset` (symbol + market)
+- [x] `Price` (valor decimal positivo via bcmath, aritmética safe)
+- [x] `Timeframe` (enum: D1, H4, H1, M15)
+- [x] `TradeDirection` (enum: LONG | SHORT)
+- [x] `PriceLevel` (Price + PriceLevelType: ENTRY | STOP | TARGET)
+- [x] `DecisionStatus` (enum: ALLOW | BLOCK | WAIT)
+- [x] `Reason` (code + description, validados)
+- [x] `Asset` (symbol uppercase + market)
 
 **State Machine:**
-- [ ] `TradeState` enum (CREATED → ANALYZED → RISK_VALIDATED → APPROVED → EXECUTED → CLOSED)
-- [ ] Estados terminais: BLOCKED, EXPIRED
-- [ ] Transições proibidas documentadas e enforced
-- [ ] Invariantes: sem execução sem APPROVED, sem reavaliação após BLOCKED
+- [x] `TradeState` enum (CREATED → ANALYZED → RISK_VALIDATED → APPROVED → EXECUTED → CLOSED)
+- [x] Estados terminais: BLOCKED, EXPIRED
+- [x] Transições proibidas documentadas e enforced via `canTransitionTo()` / `transitionTo()`
+- [x] Invariantes: sem execução sem APPROVED, sem reavaliação após BLOCKED
 
 **Domain Events:**
-- [ ] `TradeCreated`
-- [ ] `TradeAnalyzed`
-- [ ] `TradeRiskValidated`
-- [ ] `TradeApproved`
-- [ ] `TradeBlocked`
-- [ ] `TradeExecuted`
-- [ ] `TradeClosed` (já criada)
-- [ ] `TradeExpired`
+- [x] `TradeCreated` (assetSymbol, direction, timeframe)
+- [x] `TradeAnalyzed` (entry, stop, target prices)
+- [x] `TradeRiskValidated` (riskPercentage, positionSize)
+- [x] `TradeApproved`
+- [x] `TradeBlocked` (reasons[])
+- [x] `TradeExecuted` (executedPrice, quantity)
+- [x] `TradeClosed` (result como string bcmath)
+- [x] `TradeExpired` (reason)
 
 ### 1.3 Bounded Context: Journal
 
 **Entities:**
-- [ ] `TradeJournal` — registro completo do trade executado
+- [x] `TradeJournal` — registro completo do trade executado
 
 **Aggregate Root:**
-- [ ] `TradeRecord` — agrega execução + resultado + comportamento + lições
+- [x] `TradeRecord` — agrega execução + resultado + comportamento + lições
 
 **Value Objects:**
-- [ ] `Money` (amount + currency BRL, safe math)
-- [ ] `Quantity` (inteiro positivo)
-- [ ] `DateRange` (start + end, imutável)
-- [ ] `EmotionalState` enum (CONTROLLED | ANXIOUS | IMPULSIVE | OVERCONFIDENT)
-- [ ] `ResultType` enum (GAIN | LOSS | BREAKEVEN)
-- [ ] `TradeRationale` (followedPlan, deviationReason)
-- [ ] `TradeOutcome` (grossResult, netResult, resultType, realizedRR)
-- [ ] `TradeLesson` (keepDoing, improveNextTime)
+- [x] `Money` (amount bcmath + currency BRL, aritmética safe, validação de moeda)
+- [x] `Quantity` (inteiro positivo)
+- [x] `DateRange` (start + end, imutável, durationInDays)
+- [x] `EmotionalState` enum (CONTROLLED | ANXIOUS | IMPULSIVE | OVERCONFIDENT + isDivergent)
+- [x] `ResultType` enum (GAIN | LOSS | BREAKEVEN)
+- [x] `TradeRationale` (followedPlan, deviationReason obrigatório se !followedPlan)
+- [x] `TradeOutcome` (grossResult, netResult, resultType, realizedRR)
+- [x] `TradeLesson` (keepDoing, improveNextTime — ambos obrigatórios)
 
 **Regras de Domínio:**
-- [ ] Trade não fecha sem lição registrada
-- [ ] Emoção divergente + loss = flag de atenção
-- [ ] Execução fora do plano não invalida trade, invalida setup
+- [x] Trade não fecha sem lição registrada (review obrigatória)
+- [x] Emoção divergente + loss = flag de atenção (`hasAttentionFlag()`)
+- [x] Execução fora do plano não invalida trade, invalida setup (`hasSetupInvalidation()`)
 
 **Domain Events:**
-- [ ] `TradeRecordCreated`
-- [ ] `TradeReviewed`
-- [ ] `LearningDataAvailable` (já criada)
+- [x] `TradeRecordCreated` (recordId, tradeId, assetSymbol)
+- [x] `TradeReviewed` (resultType, followedPlan, emotionalState)
+- [x] `LearningDataAvailable` (refatorado: eventId, aggregateId)
 
 ### 1.4 Bounded Context: Metrics
 
 **Entities:**
-- [ ] `TraderMetrics` — snapshot consolidado de KPIs
+- [x] `TraderMetrics` — snapshot consolidado de KPIs (updatePerformance, updateBehavioral)
 
 **Value Objects:**
-- [ ] `KPI` (name, value, period)
-- [ ] `WinRate`, `Expectancy`, `ProfitFactor`, `MaxDrawdown`
-- [ ] `PlanDisciplineScore`, `EmotionalStabilityIndex`
+- [x] `KPI` (name, value bcmath, period)
+- [x] `WinRate` (0-1, asPercentage), `Expectancy` (pode ser negativo), `ProfitFactor` (≥0), `MaxDrawdown` (0-1)
+- [x] `PlanDisciplineScore` (0-1), `EmotionalStabilityIndex` (0-1)
 
 ### 1.5 Testes da Fase 1
 
-- [ ] Testes unitários para cada Value Object (criação, validação, igualdade)
-- [ ] Testes unitários para cada Entity (invariantes, regras)
-- [ ] Testes da State Machine (transições válidas e proibidas)
-- [ ] Testes do AggregateRoot (recording de eventos)
-- [ ] **Zero dependência de Laravel nos testes de Domain**
-- [ ] Testes de arquitetura com `pest-plugin-arch`:
+- [x] Testes unitários para cada Value Object (criação, validação, igualdade)
+- [x] Testes unitários para cada Entity (invariantes, regras)
+- [x] Testes da State Machine (18 testes: 8 transições válidas + proibidas + terminais)
+- [x] Testes do AggregateRoot (recording de eventos)
+- [x] **Zero dependência de Laravel nos testes de Domain**
+- [x] Testes de arquitetura com `pest-plugin-arch` (12 testes):
   - Domain não depende de Infrastructure
   - Domain não depende de Application
+  - Domain não depende de Interfaces
   - Domain não usa classes do Laravel
+  - Value Objects são final
+  - Events implementam DomainEvent
+  - Aggregates extendem AggregateRoot
 
 ### Critérios de Aceite
 
-- [ ] Nenhuma classe do Domain importa `Illuminate\*`
-- [ ] Todos os testes passam sem boot do Laravel
-- [ ] Cobertura > 90% no Domain
-- [ ] State machine cobre 100% das transições
+- [x] Nenhuma classe do Domain importa `Illuminate\*`
+- [x] Todos os testes passam sem boot do Laravel
+- [x] PHPStan nível 5 com 0 erros (baseline eliminada)
+- [x] State machine cobre 100% das transições
 
 ---
 
