@@ -10,5 +10,5 @@ interface MetricsRepository
 {
     public function update(TraderMetrics $metrics): void;
 
-    public function getCurrent(): TraderMetrics;
+    public function getCurrent(string $userId, string $period = 'monthly'): ?TraderMetrics;
 }

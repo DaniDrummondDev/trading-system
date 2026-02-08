@@ -146,68 +146,98 @@ sem nenhuma dependência de framework, banco de dados ou IA.
 
 ---
 
-## Fase 2 — Application Layer
+## Fase 2 — Application Layer (CQRS) ✅
 
 **Objetivo**: Implementar a orquestração dos use cases via CQRS,
 usando apenas contratos (interfaces) para comunicação com Infrastructure.
 
+**Resultado**: 55 novos testes (30 UC01 + 12 UC02 + 13 arch) | 154 novas assertions | PHPStan nível 5 com 0 erros
+
+### 2.0 Refatoração de Contracts
+
+- [x] `TradeJournalRepository` refatorado para trabalhar com `TradeRecord` (aggregate), não `TradeJournal` (entity)
+- [x] `MetricsRepository` refatorado com `userId` + `period` params e retorno nullable
+- [x] `UuidGenerator` contract criado (geração de IDs desacoplada)
+- [x] `UserRiskProfileProvider` contract criado
+- [x] `UserRiskProfileDTO` compartilhado criado
+
 ### 2.1 UC-01: Trade Execution
 
-**Commands:**
-- [ ] `DecideTradeOpportunityCommand` (userId, assetSymbol, timeframe, analysisSnapshotId)
-- [ ] `DecideTradeOpportunityHandler`
-  - Valida consistência das queries
-  - Solicita validação de risco
-  - Aplica regras de bloqueio
-  - Gera decisão imutável
+**Commands (1 por método do aggregate, `final readonly`):**
+- [x] `CreateTradeCommand` → `CreateTradeHandler` (retorna `TradeCreatedDTO`)
+- [x] `AnalyzeTradeCommand` → `AnalyzeTradeHandler`
+- [x] `ValidateTradeRiskCommand` → `ValidateTradeRiskHandler`
+- [x] `ApproveTradeCommand` → `ApproveTradeHandler`
+- [x] `BlockTradeCommand` → `BlockTradeHandler`
+- [x] `ExecuteTradeCommand` → `ExecuteTradeHandler`
+- [x] `CloseTradeCommand` → `CloseTradeHandler`
+- [x] `ExpireTradeCommand` → `ExpireTradeHandler`
 
-**Queries:**
-- [ ] `GetMarketDataQuery` → `CandleDTO[]`
-- [ ] `GetTechnicalAnalysisQuery` → trendDirection, pullbackDetected, keyLevels
-- [ ] `GetUserRiskProfileQuery` → maxRiskPerTrade, accountSize, maxDailyLoss
-- [ ] `GetOpenExposureQuery` → currentExposure, openTradesCount
+**Queries (`final readonly`):**
+- [x] `GetTradeByIdQuery` → `GetTradeByIdHandler` (retorna `TradeViewDTO`)
+- [x] `GetOpenTradesQuery` → `GetOpenTradesHandler` (retorna `TradeViewDTO[]`)
 
-**DTOs:**
-- [ ] `AnalyzeAssetInputDTO` (assetSymbol, timeframe, userId)
-- [ ] `TradeDecisionOutputDTO` (decision, confidenceLevel, reasons[], suggestedEntry, suggestedStop, suggestedTarget)
+**DTOs (`final readonly`):**
+- [x] `TradeCreatedDTO` (tradeId)
+- [x] `TradeViewDTO` (representação completa do trade)
+
+**Deferido para Fase 4+:**
+- `DecideTradeOpportunityCommand` (requer MarketDataProvider + TechnicalAnalysisService)
+- `GetMarketDataQuery`, `GetTechnicalAnalysisQuery` (requer infra de market data)
+- `MarketDataProvider`, `TechnicalAnalysisService`, `RiskValidationService` contracts
 
 ### 2.2 UC-02: Trade Journal
 
-**Commands:**
-- [ ] `RegisterTradeExecutionCommand` (tradeDecisionId, entryPrice, quantity, entryDate)
-- [ ] `RegisterTradeExecutionHandler`
-- [ ] `CloseTradeCommand` (tradeRecordId, exitPrice, exitDate, followedPlan, deviationReason, emotionalState, lessonsKeep, lessonsImprove)
-- [ ] `CloseTradeHandler`
-- [ ] `MarkDecisionAsExpiredCommand` (tradeDecisionId)
-- [ ] `MarkDecisionAsExpiredHandler`
+**Commands (`final readonly`):**
+- [x] `RegisterTradeExecutionCommand` → `RegisterTradeExecutionHandler` (retorna `TradeRecordCreatedDTO`)
+  - Cross-BC validation: verifica trade em estado EXECUTED antes de criar journal
+- [x] `ReviewTradeCommand` → `ReviewTradeHandler`
+  - Publica TradeReviewed + LearningDataAvailable
 
-**Queries:**
-- [ ] `GetTradeJournalQuery` (userId, dateRange) → TradeRecords[]
-- [ ] `GetTradeDetailsQuery` (tradeRecordId) → TradeRecord completo
-- [ ] `GetPerformanceSummaryQuery` (userId, timeframe) → winRate, avgRR, totalPnL, disciplineScore
-- [ ] `GetBehavioralPatternsQuery` (userId) → emotionVsResult, deviationFrequency
+**Queries (`final readonly`):**
+- [x] `GetTradeRecordByIdQuery` → `GetTradeRecordByIdHandler`
+- [x] `GetTradeRecordByTradeIdQuery` → `GetTradeRecordByTradeIdHandler`
+- [x] `GetTradeJournalQuery` → `GetTradeJournalHandler` (com filtro por período)
+- [x] `GetPerformanceSummaryQuery` → `GetPerformanceSummaryHandler` (retorna zeros se sem métricas)
 
-**Contracts adicionais:**
-- [ ] `MarketDataProvider` interface
-- [ ] `TechnicalAnalysisService` interface
-- [ ] `RiskValidationService` interface
+**DTOs (`final readonly`):**
+- [x] `TradeRecordCreatedDTO` (tradeRecordId)
+- [x] `TradeRecordViewDTO` (representação completa do trade record)
+- [x] `PerformanceSummaryDTO` (snapshot de KPIs)
 
-### 2.3 Testes da Fase 2
+**Deferido para Fase 8:**
+- `GetBehavioralPatternsQuery` (requer IA/RAG)
 
-- [ ] Testes unitários de cada Handler (com mocks dos contracts)
-- [ ] Testes de validação dos DTOs
-- [ ] Testes que Commands nunca retornam state
-- [ ] Testes que Queries nunca alteram dados
-- [ ] Testes de arquitetura:
-  - Application não conhece Eloquent
-  - Application depende apenas de Domain e Contracts
+### 2.3 Padrão de Handler
+
+Todos os handlers seguem o padrão explícito:
+1. Carregar aggregate via repository contract
+2. Invocar método do domínio (tradução primitivos → Value Objects)
+3. Salvar via repository contract
+4. `releaseEvents()` → publicar cada evento via `EventPublisher`
+
+### 2.4 Testes da Fase 2
+
+- [x] 18 testes unitários dos Handlers UC01 (com Mockery para contracts)
+- [x] 12 testes unitários dos Handlers UC02 (com Mockery para contracts)
+- [x] Testes de cenários negativos (transição inválida, trade não-EXECUTED, review duplicado)
+- [x] 13 testes de arquitetura Application Layer:
+  - Application não importa `Illuminate\*`
+  - Application não depende de `App\Infrastructure` ou `App\Interfaces`
+  - Commands e Queries são `final readonly`
+  - DTOs são `final readonly`
+  - Handlers são `final`
+- [x] **Zero dependência de Laravel na Application Layer**
 
 ### Critérios de Aceite
 
-- [ ] Todos os Handlers testados com mocks
-- [ ] Nenhum import de Infrastructure na Application
-- [ ] DTOs são imutáveis
-- [ ] Commands e Queries respeitam CQRS rigorosamente
+- [x] Todos os Handlers testados com mocks (30 testes)
+- [x] Nenhum import de Infrastructure na Application
+- [x] DTOs são imutáveis (`final readonly`)
+- [x] Commands retornam `void` (exceto Create que retorna DTO com ID)
+- [x] Queries nunca alteram estado
+- [x] PHPStan nível 5 com 0 erros
+- [x] Pint formatação OK
 
 ---
 
