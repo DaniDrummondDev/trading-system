@@ -1,0 +1,325 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (Pint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+  static-analysis:
+    name: Static Analysis (PHPStan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=512M --no-progress
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Run Composer Audit
+        run: composer audit
+
+  unit-tests:
+    name: Unit Tests (Domain + Application)
+    runs-on: ubuntu-latest
+    needs: [lint, static-analysis]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: bcmath, pcntl, intl
+          tools: composer:v2
+          coverage: pcov
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.ci .env
+          php artisan key:generate
+
+      - name: Run Unit Tests
+        run: vendor/bin/pest --testsuite=Unit --coverage-clover=coverage-unit.xml
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-unit
+          path: coverage-unit.xml
+          retention-days: 7
+
+  arch-tests:
+    name: Architecture Tests
+    runs-on: ubuntu-latest
+    needs: [lint, static-analysis]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: bcmath, pcntl, intl
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.ci .env
+          php artisan key:generate
+
+      - name: Run Architecture Tests
+        run: vendor/bin/pest --group=arch
+
+  integration-tests:
+    name: Integration Tests (PostgreSQL + Redis)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18
+        env:
+          POSTGRES_DB: trading_system
+          POSTGRES_USER: trading
+          POSTGRES_PASSWORD: trading_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U trading -d trading_system"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, pgsql, redis, bcmath, pcntl, intl, zip, gd
+          tools: composer:v2
+          coverage: pcov
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.ci.integration .env
+          php artisan key:generate
+
+      - name: Enable PostgreSQL extensions
+        run: |
+          PGPASSWORD=trading_secret psql -h 127.0.0.1 -U trading -d trading_system -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          PGPASSWORD=trading_secret psql -h 127.0.0.1 -U trading -d trading_system -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run Integration Tests
+        run: vendor/bin/pest --testsuite=Integration --coverage-clover=coverage-integration.xml
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-integration
+          path: coverage-integration.xml
+          retention-days: 7
+
+  feature-tests:
+    name: Feature Tests (Full Laravel + DB)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18
+        env:
+          POSTGRES_DB: trading_system
+          POSTGRES_USER: trading
+          POSTGRES_PASSWORD: trading_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U trading -d trading_system"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, pgsql, redis, bcmath, pcntl, intl, zip, gd
+          tools: composer:v2
+          coverage: pcov
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.ci.integration .env
+          php artisan key:generate
+
+      - name: Enable PostgreSQL extensions
+        run: |
+          PGPASSWORD=trading_secret psql -h 127.0.0.1 -U trading -d trading_system -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          PGPASSWORD=trading_secret psql -h 127.0.0.1 -U trading -d trading_system -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run Feature Tests
+        run: vendor/bin/pest --testsuite=Feature --coverage-clover=coverage-feature.xml
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-feature
+          path: coverage-feature.xml
+          retention-days: 7
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, feature-tests]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+
+      - name: Coverage summary
+        run: |
+          echo "## Coverage artifacts" >> $GITHUB_STEP_SUMMARY
+          for f in coverage-*.xml; do
+            if [ -f "$f" ]; then
+              echo "- $f" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          ls -la coverage-*.xml 2>/dev/null || echo "No coverage files found"

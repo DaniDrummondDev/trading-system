@@ -15,6 +15,6 @@ class TradeClosed implements DomainEvent
 
     public function occurredOn(): \DateTimeImmutable
     {
-        return new \DateTimeImmutable();
+        return new \DateTimeImmutable;
     }
 }

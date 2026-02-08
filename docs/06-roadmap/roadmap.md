@@ -776,11 +776,15 @@ com isolamento de dados, permissões e deployment containerizado.
 - [ ] Permissões granulares por recurso
 - [ ] Audit de acesso por tenant
 
-### 10.3 CI/CD Pipeline
+### 10.3 CI/CD Pipeline ✅ (antecipado — implementado na Fase 0)
 
-- [ ] GitHub Actions: lint, test, build
-- [ ] Pipeline: PR → tests → review → merge → deploy
-- [ ] Environment: staging → production
+- [x] GitHub Actions: lint (Pint), static analysis (PHPStan/Larastan), testes, coverage
+- [x] Pipeline: PR → lint → analyse → unit tests → arch tests → integration → feature → coverage
+- [x] Security audit semanal (composer audit)
+- [x] Deploy workflow (staging/production via tags e manual dispatch)
+- [x] Documentação completa em `docs/07-cicd/`
+- [ ] Configurar branch protection rules no GitHub (manual)
+- [ ] Deploy efetivo (depende da escolha de hosting)
 
 ### 10.4 Deployment
 
@@ -813,11 +817,18 @@ com isolamento de dados, permissões e deployment containerizado.
 - `declare(strict_types=1)` em todos os arquivos
 - Pest para todos os testes
 - Pint (Laravel) para formatação
+- PHPStan/Larastan nível 5+ (progressão incremental)
+
+### CI/CD (GitHub Actions)
+- Todo PR deve passar no CI antes de merge
+- Pipeline: lint → static analysis → unit tests → arch tests → integration → feature
+- Security audit semanal automático
+- Coverage report como artefato
 
 ### Versionamento
 - Commits semânticos e frequentes
 - Branches por fase/feature
-- PRs com revisão
+- PRs com revisão e CI obrigatório
 
 ### Decisões Arquiteturais
 - Qualquer desvio de ARCHITECTURE.md deve ser documentado como ADR

@@ -200,6 +200,7 @@ docker compose exec app ./vendor/bin/pest --coverage
 | [04 - Métricas e Learning](docs/04-metrics-and-learning/) | KPIs, Learning Loop, integração com IA |
 | [05 - Arquitetura](docs/05-arquitecture/) | Estrutura de pastas, namespaces, contratos |
 | [06 - Roadmap](docs/06-roadmap/) | Fases de implementação e critérios de aceite |
+| [07 - CI/CD](docs/07-cicd/) | Pipeline GitHub Actions, PHPStan, deploy |
 
 ### Contexto do Claude
 
