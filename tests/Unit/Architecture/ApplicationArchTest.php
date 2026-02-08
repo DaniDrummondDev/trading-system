@@ -19,37 +19,37 @@ arch('Application não depende de Interfaces')
     ->not->toUse('App\Interfaces');
 
 arch('Commands UC01 são final e readonly')
-    ->expect('App\Application\UC01_TradeExecution\Commands')
+    ->expect('App\Application\TradeExecution\Commands')
     ->classes()
     ->toBeFinal()
     ->toBeReadonly();
 
 arch('Commands UC02 são final e readonly')
-    ->expect('App\Application\UC02_TradeJournal\Commands')
+    ->expect('App\Application\TradeJournal\Commands')
     ->classes()
     ->toBeFinal()
     ->toBeReadonly();
 
 arch('Queries UC01 são final e readonly')
-    ->expect('App\Application\UC01_TradeExecution\Queries')
+    ->expect('App\Application\TradeExecution\Queries')
     ->classes()
     ->toBeFinal()
     ->toBeReadonly();
 
 arch('Queries UC02 são final e readonly')
-    ->expect('App\Application\UC02_TradeJournal\Queries')
+    ->expect('App\Application\TradeJournal\Queries')
     ->classes()
     ->toBeFinal()
     ->toBeReadonly();
 
 arch('DTOs UC01 são final e readonly')
-    ->expect('App\Application\UC01_TradeExecution\DTOs')
+    ->expect('App\Application\TradeExecution\DTOs')
     ->classes()
     ->toBeFinal()
     ->toBeReadonly();
 
 arch('DTOs UC02 são final e readonly')
-    ->expect('App\Application\UC02_TradeJournal\DTOs')
+    ->expect('App\Application\TradeJournal\DTOs')
     ->classes()
     ->toBeFinal()
     ->toBeReadonly();
@@ -61,11 +61,11 @@ arch('DTOs Shared são final e readonly')
     ->toBeReadonly();
 
 arch('Handlers UC01 são final')
-    ->expect('App\Application\UC01_TradeExecution\Handlers')
+    ->expect('App\Application\TradeExecution\Handlers')
     ->classes()
     ->toBeFinal();
 
 arch('Handlers UC02 são final')
-    ->expect('App\Application\UC02_TradeJournal\Handlers')
+    ->expect('App\Application\TradeJournal\Handlers')
     ->classes()
     ->toBeFinal();

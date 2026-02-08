@@ -145,14 +145,14 @@ DOMAIN_DIRS=(
 
 # Application Layer
 APP_DIRS=(
-    "app/Application/UC01_TradeExecution/Commands"
-    "app/Application/UC01_TradeExecution/Queries"
-    "app/Application/UC01_TradeExecution/Handlers"
-    "app/Application/UC01_TradeExecution/DTOs"
-    "app/Application/UC02_TradeJournal/Commands"
-    "app/Application/UC02_TradeJournal/Queries"
-    "app/Application/UC02_TradeJournal/Handlers"
-    "app/Application/UC02_TradeJournal/DTOs"
+    "app/Application/TradeExecution/Commands"
+    "app/Application/TradeExecution/Queries"
+    "app/Application/TradeExecution/Handlers"
+    "app/Application/TradeExecution/DTOs"
+    "app/Application/TradeJournal/Commands"
+    "app/Application/TradeJournal/Queries"
+    "app/Application/TradeJournal/Handlers"
+    "app/Application/TradeJournal/DTOs"
     "app/Application/Contracts"
 )
 
@@ -179,8 +179,8 @@ TEST_DIRS=(
     "tests/Unit/Domain/Trade"
     "tests/Unit/Domain/Journal"
     "tests/Unit/Domain/Metrics"
-    "tests/Unit/Application/UC01_TradeExecution"
-    "tests/Unit/Application/UC02_TradeJournal"
+    "tests/Unit/Application/TradeExecution"
+    "tests/Unit/Application/TradeJournal"
     "tests/Integration/Infrastructure/Persistence"
     "tests/Integration/Infrastructure/MarketData"
     "tests/Integration/Infrastructure/AI"

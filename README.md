@@ -109,8 +109,8 @@ app/
 │   └── Shared/          Shared Kernel (DomainEvent, base classes)
 │
 ├── Application/         Orquestração de use cases via CQRS
-│   ├── UC01_TradeExecution/   Análise e decisão de trade
-│   ├── UC02_TradeJournal/     Journal e learning loop
+│   ├── TradeExecution/   Análise e decisão de trade
+│   ├── TradeJournal/     Journal e learning loop
 │   └── Contracts/             Interfaces para Infrastructure
 │
 ├── Infrastructure/      Implementações técnicas

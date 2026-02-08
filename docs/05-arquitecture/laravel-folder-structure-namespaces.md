@@ -19,8 +19,8 @@ app/
  │    └── Metrics/
  │
  ├── Application/
- │    ├── UC01_TradeExecution/
- │    ├── UC02_TradeJournal/
+ │    ├── TradeExecution/
+ │    ├── TradeJournal/
  │    └── Contracts/
  │
  ├── Infrastructure/
@@ -48,8 +48,8 @@ App\Domain\Trade\Aggregates
 ### Application
 
 ```
-App\Application\UC01_TradeExecution\Commands
-App\Application\UC01_TradeExecution\Handlers
+App\Application\TradeExecution\Commands
+App\Application\TradeExecution\Handlers
 App\Application\Contracts
 ```
 

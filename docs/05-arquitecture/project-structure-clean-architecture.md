@@ -54,7 +54,7 @@ Orquestra casos de uso (sem regra de negócio).
 
 ```
 Application/
- ├── UC01_TradeExecution/
+ ├── TradeExecution/
  │    ├── Commands/
  │    │    └── OpenTradeCommand.php
  │    ├── Queries/
@@ -64,7 +64,7 @@ Application/
  │    └── DTOs/
  │         └── TradeDecisionDTO.php
  │
- ├── UC02_TradeJournal/
+ ├── TradeJournal/
  │    ├── Commands/
  │    │    ├── CloseTradeCommand.php
  │    │    └── AddTradeNoteCommand.php
