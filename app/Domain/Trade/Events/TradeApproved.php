@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Metrics\Events;
+namespace App\Domain\Trade\Events;
 
 use App\Domain\Shared\Events\DomainEvent;
 
-final class LearningDataAvailable implements DomainEvent
+final class TradeApproved implements DomainEvent
 {
     private readonly string $eventId;
 

@@ -6,15 +6,42 @@ namespace App\Domain\Trade\Events;
 
 use App\Domain\Shared\Events\DomainEvent;
 
-class TradeClosed implements DomainEvent
+final class TradeClosed implements DomainEvent
 {
+    private readonly string $eventId;
+
+    private readonly \DateTimeImmutable $occurredOn;
+
     public function __construct(
-        public readonly string $tradeId,
-        public readonly float $result,
-    ) {}
+        private readonly string $tradeId,
+        private readonly string $result,
+    ) {
+        $this->eventId = bin2hex(random_bytes(16));
+        $this->occurredOn = new \DateTimeImmutable;
+    }
+
+    public function eventId(): string
+    {
+        return $this->eventId;
+    }
 
     public function occurredOn(): \DateTimeImmutable
     {
-        return new \DateTimeImmutable;
+        return $this->occurredOn;
+    }
+
+    public function aggregateId(): string
+    {
+        return $this->tradeId;
+    }
+
+    public function tradeId(): string
+    {
+        return $this->tradeId;
+    }
+
+    public function result(): string
+    {
+        return $this->result;
     }
 }

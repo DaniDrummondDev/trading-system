@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Metrics\Events;
+namespace App\Domain\Trade\Events;
 
 use App\Domain\Shared\Events\DomainEvent;
 
-final class LearningDataAvailable implements DomainEvent
+final class TradeExecuted implements DomainEvent
 {
     private readonly string $eventId;
 
@@ -14,6 +14,8 @@ final class LearningDataAvailable implements DomainEvent
 
     public function __construct(
         private readonly string $tradeId,
+        private readonly string $executedPrice,
+        private readonly int $quantity,
     ) {
         $this->eventId = bin2hex(random_bytes(16));
         $this->occurredOn = new \DateTimeImmutable;
@@ -37,5 +39,15 @@ final class LearningDataAvailable implements DomainEvent
     public function tradeId(): string
     {
         return $this->tradeId;
+    }
+
+    public function executedPrice(): string
+    {
+        return $this->executedPrice;
+    }
+
+    public function quantity(): int
+    {
+        return $this->quantity;
     }
 }

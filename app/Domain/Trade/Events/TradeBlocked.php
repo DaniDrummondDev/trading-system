@@ -2,18 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Metrics\Events;
+namespace App\Domain\Trade\Events;
 
 use App\Domain\Shared\Events\DomainEvent;
 
-final class LearningDataAvailable implements DomainEvent
+final class TradeBlocked implements DomainEvent
 {
     private readonly string $eventId;
 
     private readonly \DateTimeImmutable $occurredOn;
 
+    /**
+     * @param  string[]  $reasons
+     */
     public function __construct(
         private readonly string $tradeId,
+        private readonly array $reasons,
     ) {
         $this->eventId = bin2hex(random_bytes(16));
         $this->occurredOn = new \DateTimeImmutable;
@@ -37,5 +41,13 @@ final class LearningDataAvailable implements DomainEvent
     public function tradeId(): string
     {
         return $this->tradeId;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function reasons(): array
+    {
+        return $this->reasons;
     }
 }
