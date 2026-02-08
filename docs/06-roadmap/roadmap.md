@@ -28,7 +28,7 @@ contratos base) já foi concluída.
 | 5 | API REST | Fases 2, 3 | Controllers, validação, Sanctum |
 | 6 | Risk Engine & Kill Switch | Fases 1, 3 | Governança de risco operacional |
 | 7 | KPIs & Métricas | Fases 3, 5 | Performance, comportamento, processo |
-| 8 | IA Learning Loop | Fases 3, 7 | pgvector, patterns, feedback |
+| 8 | IA Learning Loop & RAG | Fases 3, 7 | pgvector, embeddings, RAG, patterns, feedback |
 | 9 | Segurança, Compliance & Testes E2E | Todas anteriores | LGPD, auditoria, cobertura |
 | 10 | Evolução SaaS | Todas anteriores | Multi-tenant, permissões, deploy |
 
@@ -220,6 +220,10 @@ Eloquent Models e repositórios concretos.
 - [ ] `create_user_profiles_table` (risk profile, trading profile)
 - [ ] `create_market_data_table` (candles OHLCV)
 - [ ] `create_domain_events_table` (event store imutável)
+- [ ] `create_ai_analyses_table` (embeddings via pgvector — preparação para Fase 8)
+  - Coluna `embedding vector(1536)` para armazenamento vetorial
+  - Índice HNSW (`vector_cosine_ops`) para similarity search
+  - Metadados JSONB (ticker, timeframe, strategy, context)
 
 ### 3.2 Eloquent Models
 
@@ -232,6 +236,7 @@ Localização: `app/Infrastructure/Persistence/Eloquent/`
 - [ ] `UserProfileModel`
 - [ ] `MarketDataModel`
 - [ ] `DomainEventModel`
+- [ ] `AiAnalysisModel` (com cast de `vector` via pgvector)
 
 ### 3.3 Repository Implementations
 
@@ -242,6 +247,7 @@ Localização: `app/Infrastructure/Persistence/Repositories/`
 - [ ] `MetricsRepositoryEloquent` implements `MetricsRepository`
 - [ ] `UserProfileRepositoryEloquent`
 - [ ] `MarketDataRepositoryEloquent`
+- [ ] `AiAnalysisRepositoryPgVector` implements `AiAnalysisRepository` (similarity search)
 
 ### 3.4 Event Bus
 
@@ -520,67 +526,167 @@ em `trader-kpis.md`, alimentados pelo Journal (UC-02).
 
 ---
 
-## Fase 8 — IA Learning Loop
+## Fase 8 — IA Learning Loop & RAG (Retrieval-Augmented Generation)
 
 **Objetivo**: Implementar a IA como **observador e sistema de feedback**,
 usando dados do Journal e KPIs para melhorar decisões futuras.
+Toda análise gerada pela IA é armazenada como **embedding vetorial** (pgvector)
+para ser recuperada por **similarity search** em análises futuras (padrão RAG).
 
 **Regra inviolável**: IA NÃO executa trades, NÃO aprova, NÃO altera dados.
 
-### 8.1 Data Pipeline
+### 8.1 Estratégia de Embeddings & RAG
+
+A IA produz análises textuais que são convertidas em vetores e armazenadas
+no PostgreSQL via pgvector. Quando uma nova análise é solicitada, o sistema
+busca análises passadas similares e as injeta como contexto.
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌──────────────┐
+│  AI gera    │────▶│ Embedding Model  │────▶│  pgvector    │
+│  análise    │     │ (texto → vetor)  │     │  armazena    │
+└─────────────┘     └──────────────────┘     └──────┬───────┘
+                                                     │
+┌─────────────┐     ┌──────────────────┐     ┌──────▼───────┐
+│  AI recebe  │◀────│ Contexto RAG     │◀────│  Similarity  │
+│  contexto   │     │ (top-N similar)  │     │  Search      │
+└─────────────┘     └──────────────────┘     └──────────────┘
+```
+
+**Tipos de conteúdo armazenado como embedding:**
+
+| Tipo | Exemplo | Valor para RAG |
+|------|---------|----------------|
+| Análise de trade | "PETR4 tendência alta, pullback MA21..." | Encontrar trades similares |
+| Journal / lições | "Entrei cedo demais no pullback..." | Padrões de erro recorrentes |
+| Decisão de risco | "BLOCK: exposição setorial > 30%" | Decisões de risco similares |
+| Feedback da IA | "Trader tende a ignorar stop em VALE3" | Padrões comportamentais |
+| Contexto de mercado | "IBOV em consolidação, volatilidade baixa" | Regimes de mercado similares |
+
+**Modelo de embedding (escolher um):**
+
+| Modelo | Dimensões | Custo | Observação |
+|--------|-----------|-------|------------|
+| OpenAI `text-embedding-3-small` | 1536 | Pago (~$0.02/1M tokens) | Melhor custo-benefício |
+| OpenAI `text-embedding-3-large` | 3072 | Pago | Maior precisão |
+| Ollama `nomic-embed-text` (local) | 768 | Grátis | Sem dependência externa |
+
+> **Decisão de dimensões é irreversível sem re-embedar todo o histórico.**
+> Escolher antes de iniciar a implementação.
+
+### 8.2 Embedding Pipeline
+
+- [ ] `EmbeddingService` contract (Application layer)
+  - `generateEmbedding(string $text): EmbeddingVector`
+  - `generateBatchEmbeddings(array $texts): array`
+- [ ] `OpenAIEmbeddingService` implementação (Infrastructure layer)
+- [ ] `OllamaEmbeddingService` implementação alternativa (opcional, local)
+- [ ] `EmbeddingVector` Value Object no Domain (Shared)
+  - Encapsula o vetor de dimensões
+  - Validação de dimensões no construtor
+- [ ] Listener `GenerateAnalysisEmbedding` que escuta eventos:
+  - `TradeAnalyzed` → embeda a análise
+  - `TradeClosed` → embeda o journal + lição
+  - `LearningDataAvailable` → embeda o feedback
+- [ ] Geração de embedding é **assíncrona** (event-driven, não bloqueia fluxo)
+- [ ] Fallback: se embedding falhar, análise continua sem RAG
+
+### 8.3 RAG — Retrieval-Augmented Generation
+
+- [ ] `AiAnalysisRepository` contract (Application layer)
+  - `save(AiAnalysis $analysis): void`
+  - `findSimilar(EmbeddingVector $query, int $limit, ?string $type): AiAnalysis[]`
+  - `findByTradeId(string $tradeId): AiAnalysis[]`
+- [ ] `AiAnalysisRepositoryPgVector` implementação (Infrastructure layer)
+  - Usa operador `<=>` (cosine distance) do pgvector
+  - Índice HNSW para performance em escala
+- [ ] `RagContextBuilder` (Infrastructure/AI)
+  - Antes de gerar nova análise, busca top-N análises similares
+  - Formata como contexto para o prompt
+  - Filtrável por tipo (trade, journal, risco, feedback)
+- [ ] Integração com PromptBuilders:
+  - Prompt inclui seção "Análises históricas similares"
+  - Prompt indica claramente o que é contexto RAG vs. dados atuais
+
+**Exemplo de query RAG:**
+
+```sql
+-- Buscar as 5 análises mais similares à situação atual
+SELECT id, trade_id, content, analysis_type, metadata,
+       1 - (embedding <=> $1) AS similarity
+FROM ai_analyses
+WHERE analysis_type = 'trade_analysis'
+  AND (metadata->>'timeframe') = 'D1'
+ORDER BY embedding <=> $1
+LIMIT 5;
+```
+
+### 8.4 Data Pipeline
 
 - [ ] Captura de Learning Snapshots (trades, KPIs, emoções)
 - [ ] Feature extraction para IA
-- [ ] Armazenamento de embeddings via pgvector
 - [ ] Versionamento de dados de treino
+- [ ] Metadata enriquecido em JSONB (ticker, timeframe, strategy, regime de mercado)
 
-### 8.2 Pattern Detection
+### 8.5 Pattern Detection
 
-- [ ] Correlação setup × resultado
+- [ ] Correlação setup × resultado (via similarity search)
 - [ ] Correlação emoção × loss
-- [ ] Identificação de erros recorrentes
+- [ ] Identificação de erros recorrentes (cluster de embeddings similares)
 - [ ] Detecção de sequências fora do plano
 
-### 8.3 Bias Detection
+### 8.6 Bias Detection
 
 - [ ] Overconfidence (excesso de confiança pós-ganho)
 - [ ] Revenge trading (operação impulsiva pós-loss)
 - [ ] Overtrading (frequência acima do normal)
 
-### 8.4 Feedback Generation
+### 8.7 Feedback Generation
 
 - [ ] Feedback operacional: "Você perde mais quando ignora o stop"
 - [ ] Alertas preventivos: "Risco comportamental elevado hoje"
 - [ ] Recomendações de processo: "Reduza frequência", "Pause após X losses"
+- [ ] **Feedback enriquecido por RAG**: "Em situações similares, você obteve X% de perda"
 
-### 8.5 Integração com UC-01
+### 8.8 Integração com UC-01 (RAG-Powered)
 
-- [ ] Antes de nova análise, IA fornece **contexto adicional**
-- [ ] Exemplo: "Setup válido, mas disciplina recente está baixa"
-- [ ] IA não bloqueia — apenas informa
+- [ ] Antes de nova análise, buscar análises similares via pgvector
+- [ ] Injetar contexto RAG no prompt da IA
+- [ ] Exemplo: "Em 3 situações similares com PETR4 em pullback, 2 resultaram em gain"
+- [ ] IA não bloqueia — apenas informa com contexto histórico
 
-### 8.6 Integração com Laravel AI SDK
+### 8.9 Integração com Laravel AI SDK
 
 - [ ] Prompts versionados em `Infrastructure/AI/PromptBuilders/`
 - [ ] IA consumida apenas via Infrastructure layer
 - [ ] Outputs logados e rastreáveis
 - [ ] Feature flags para desabilitar IA sem impacto
+- [ ] Feature flag separada para RAG (pode desligar RAG mantendo IA básica)
 
-### 8.7 Testes da Fase 8
+### 8.10 Testes da Fase 8
 
+- [ ] Testes unitários do `EmbeddingVector` Value Object
+- [ ] Testes do `EmbeddingService` (mock do provider externo)
+- [ ] Testes de integração do `AiAnalysisRepositoryPgVector` (similarity search real)
+- [ ] Testes do `RagContextBuilder` (formatação do contexto)
 - [ ] Testes de pattern detection com dados sintéticos
 - [ ] Testes de feedback generation
 - [ ] Testes que IA nunca altera dados do Journal
 - [ ] Testes que IA pode ser desligada sem quebrar o sistema
-- [ ] Testes de arquitetura: IA apenas em Infrastructure
+- [ ] Testes que RAG pode ser desligado independentemente da IA
+- [ ] Testes de arquitetura: IA e embeddings apenas em Infrastructure
 
 ### Critérios de Aceite
 
 - [ ] IA funciona como observador puro
 - [ ] Todos os outputs da IA são logados
 - [ ] IA desligável e reversível (feature flag)
+- [ ] RAG desligável independentemente (feature flag separada)
 - [ ] Prompts versionados como código
-- [ ] Sistema funciona 100% sem IA
+- [ ] Sistema funciona 100% sem IA e sem RAG
+- [ ] Embeddings gerados assincronamente (não bloqueiam fluxo)
+- [ ] Similarity search retorna resultados relevantes (validado manualmente)
+- [ ] Dimensões do vetor documentadas como ADR (decisão irreversível)
 
 ---
 

@@ -163,12 +163,77 @@ Limites:
 
 ---
 
+## Embeddings & RAG (Retrieval-Augmented Generation)
+
+### Conceito
+
+Toda análise produzida pela IA é convertida em **embedding vetorial** e armazenada
+no PostgreSQL via **pgvector**. Quando uma nova análise é solicitada, o sistema recupera
+análises históricas similares via **similarity search** e as injeta como contexto (RAG).
+
+```
+Nova Análise → Embedding Model → pgvector armazena
+                                       ↓
+Próxima Análise ← AI + contexto RAG ← Similarity Search
+```
+
+### Posição na Arquitetura
+
+```
+Domain/Shared/ValueObjects/
+  └── EmbeddingVector.php          ← VO imutável (vetor de dimensões)
+
+Application/Contracts/
+  ├── EmbeddingService.php         ← Interface: texto → vetor
+  └── AiAnalysisRepository.php     ← Interface: save + findSimilar
+
+Infrastructure/AI/
+  ├── EmbeddingService/
+  │   ├── OpenAIEmbeddingService.php
+  │   └── OllamaEmbeddingService.php   (alternativa local)
+  ├── RagContextBuilder.php        ← Monta contexto para prompts
+  └── PromptBuilders/              ← Prompts com seção RAG
+
+Infrastructure/Persistence/Repositories/
+  └── AiAnalysisRepositoryPgVector.php  ← Similarity search via pgvector
+```
+
+### Regras Arquiteturais
+
+- `EmbeddingVector` é um **Value Object** no Domain (imutável, sem dependência externa)
+- `EmbeddingService` é um **contrato** na Application (interface)
+- Implementações vivem na **Infrastructure** (OpenAI, Ollama)
+- Geração de embedding é **assíncrona** (event-driven)
+- RAG é **desligável** independentemente da IA (feature flag)
+- Se embedding falhar, o sistema continua funcionando sem RAG
+- Dimensões do vetor são uma **decisão irreversível** (requer ADR)
+
+### Armazenamento
+
+```sql
+-- Tabela: ai_analyses
+-- Coluna: embedding vector(1536) com índice HNSW
+-- Metadados: JSONB (ticker, timeframe, strategy, regime)
+-- Busca: operador <=> (cosine distance)
+```
+
+### O que é armazenado
+
+- Análises de trade (setup, tendência, pullback)
+- Lições do journal (erros, acertos, aprendizados)
+- Decisões de risco (ALLOW, BLOCK, motivos)
+- Feedback da IA (padrões comportamentais)
+- Contexto de mercado (regime, volatilidade)
+
+---
+
 ## Persistência de Dados
 
 - PostgreSQL 18 como banco principal
-- pgvector para embeddings
+- pgvector para embeddings e similarity search
 - Dados operacionais ≠ analíticos
 - Histórico nunca é sobrescrito
+- Embeddings são append-only (nunca alterados)
 
 ---
 
